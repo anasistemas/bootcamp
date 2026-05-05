@@ -2,61 +2,67 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
 )
 
 func main() {
-	contarLineas := false
-
-	for _, arg := range os.Args[1:] {
-		if arg == "-l" {
-			contarLineas = true
-		}
-	}
+	l := flag.Bool("l", false, "contar lineas")
+	b := flag.Bool("b", false, "contar bytes")
+	flag.Parse()
 
 	scanner := bufio.NewScanner(os.Stdin)
-	palabras := 0
-	lineas := 0
+	words := 0
+	lines := 0
+	bytes := 0
 
 	for scanner.Scan() {
-		texto := scanner.Text()
+		text := scanner.Text()
 
-		if texto == "salida" {
+		if strings.ToLower(text) == "exit" {
 			break
 		}
 
-		lineas++
-		palabras += len(strings.Fields(texto))
+		lines++
+		words += len(strings.Fields(text))
+		bytes += len(text)
 	}
 
-	if contarLineas {
-		fmt.Println(lineas)
+	if *l {
+		fmt.Println(lines)
+	} else if *b {
+		fmt.Println(bytes)
 	} else {
-		fmt.Println(palabras)
+		fmt.Println(words)
 	}
 }
 
-func procesarEntrada(entrada string, contarLineas bool) int {
-	lineas := 0
-	palabras := 0
+func procesarEntrada(entrada string, l bool, b bool) int {
+	words := 0
+	lines := 0
+	bytes := 0
 
 	scanner := bufio.NewScanner(strings.NewReader(entrada))
 
 	for scanner.Scan() {
-		texto := scanner.Text()
+		text := scanner.Text()
 
-		if strings.ToLower(texto) == "exit" {
+		if strings.ToLower(text) == "exit" {
 			break
 		}
 
-		lineas++
-		palabras += len(strings.Fields(texto))
+		lines++
+		words += len(strings.Fields(text))
+		bytes += len(text)
 	}
 
-	if contarLineas {
-		return lineas
+	if l {
+		return lines
 	}
-	return palabras
+	if b {
+		return bytes
+	}
+	return words
 }
