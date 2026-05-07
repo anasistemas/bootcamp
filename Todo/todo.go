@@ -1,7 +1,9 @@
 package todo
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
 	"time"
 )
 
@@ -38,4 +40,26 @@ func (l *List) Delete(indice int) error {
 	}
 	*l = append(lista[:indice-1], lista[indice:]...)
 	return nil
+}
+
+func (l *List) Save(archivo string) error {
+	data, err := json.Marshal(l)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(archivo, data, 0644)
+}
+
+func (l *List) Get(archivo string) error {
+	data, err := os.ReadFile(archivo)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return errors.New("archivo no encontrado")
+		}
+		return err
+	}
+	if len(data) == 0 {
+		return nil
+	}
+	return json.Unmarshal(data, l)
 }
