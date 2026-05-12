@@ -8,14 +8,17 @@ import (
 	"todo"
 )
 
-const archivoTareas = ".todo.json"
-
 func salir(err error) {
 	fmt.Fprintln(os.Stderr, err)
 	os.Exit(1)
 }
 
 func main() {
+	archivo := ".todo.json"
+	if env := os.Getenv("TODO_FILENAME"); env != "" {
+		archivo = env
+	}
+
 	list := flag.Bool("list", false, "Ver tareas incompletas")
 	task := flag.String("task", "", "Agregar una nueva tarea")
 	complete := flag.Int("complete", 0, "Completar una tarea por número")
@@ -29,7 +32,7 @@ func main() {
 	}
 
 	l := &todo.List{}
-	if err := l.Get(archivoTareas); err != nil {
+	if err := l.Get(archivo); err != nil {
 		salir(err)
 	}
 
@@ -46,7 +49,7 @@ func main() {
 		if err := l.Complete(*complete); err != nil {
 			salir(err)
 		}
-		if err := l.Save(archivoTareas); err != nil {
+		if err := l.Save(archivo); err != nil {
 			salir(err)
 		}
 
@@ -54,13 +57,13 @@ func main() {
 		if err := l.Delete(*delete); err != nil {
 			salir(err)
 		}
-		if err := l.Save(archivoTareas); err != nil {
+		if err := l.Save(archivo); err != nil {
 			salir(err)
 		}
 
 	case *task != "":
 		l.Add(*task)
-		if err := l.Save(archivoTareas); err != nil {
+		if err := l.Save(archivo); err != nil {
 			salir(err)
 		}
 	}
