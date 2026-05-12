@@ -22,15 +22,12 @@ func TestMain(m *testing.M) {
 		binName += ".exe"
 	}
 
-	build := exec.Command("go", "build", "-o", binName)
-	err := build.Run()
-	if err != nil {
+	if err := exec.Command("go", "build", "-o", binName).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot build tool %s: %s", binName, err)
 		os.Exit(1)
 	}
 
-	err = os.WriteFile(fileName, []byte{}, 0644)
-	if err != nil {
+	if err := os.WriteFile(fileName, []byte{}, 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot create file %s", fileName)
 		os.Exit(1)
 	}
@@ -41,7 +38,6 @@ func TestMain(m *testing.M) {
 	fmt.Println("Cleaning up....")
 	os.Remove(binName)
 	os.Remove(fileName)
-
 	os.Exit(result)
 }
 
@@ -55,27 +51,51 @@ func TestTodoCLI(t *testing.T) {
 
 	cmdPath := filepath.Join(dir, binName)
 
-	t.Run("AddNewTask", func(t *testing.T) {
-		cmd := exec.Command(cmdPath, strings.Split(task, " ")...)
-		fmt.Println(cmd)
-		err := cmd.Run()
+	run := func(t *testing.T, args ...string) {
+		t.Helper()
+		if err := exec.Command(cmdPath, args...).Run(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	output := func(t *testing.T, args ...string) string {
+		t.Helper()
+		out, err := exec.Command(cmdPath, args...).CombinedOutput()
 		if err != nil {
 			t.Fatal(err)
 		}
+		return string(out)
+	}
+
+	t.Run("AddNewTask", func(t *testing.T) {
+		run(t, "-task", task)
 	})
 
 	t.Run("ListTasks", func(t *testing.T) {
-		cmd := exec.Command(cmdPath)
-		fmt.Println(cmd)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatal(err)
+		out := output(t, "-list")
+		expected := "Title: " + task + ", Done: false, CreatedAt: "
+		if !strings.Contains(out, expected) {
+			t.Errorf("esperaba %q en la salida, pero se obtuvo: %s", expected, out)
 		}
+	})
 
-		expected := task + "\n"
+	t.Run("CompleteTask", func(t *testing.T) {
+		run(t, "-complete", "1")
 
-		if expected != string(out) {
-			t.Errorf("expected %s, got %s instead", expected, string(out))
+		out := output(t, "-list")
+		if strings.Contains(out, task) {
+			t.Errorf("la tarea completada no debería aparecer en la lista, pero se obtuvo: %s", out)
+		}
+	})
+
+	t.Run("DeleteTask", func(t *testing.T) {
+		run(t, "-task", "Tarea para borrar")
+
+		run(t, "-delete", "2")
+
+		out := output(t, "-list")
+		if strings.Contains(out, "Tarea para borrar") {
+			t.Errorf("la tarea borrada no debería aparecer en la lista, pero se obtuvo: %s", out)
 		}
 	})
 }
