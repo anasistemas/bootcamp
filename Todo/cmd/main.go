@@ -38,12 +38,7 @@ func main() {
 
 	switch {
 	case *list:
-		for _, t := range *l {
-			if !t.Done {
-				fmt.Printf("Title: %s, Done: %t, CreatedAt: %s, CompletedAt: %s\n",
-					t.Task, t.Done, t.CreatedAt, t.CompletedAt)
-			}
-		}
+		fmt.Print(l)
 
 	case *complete != 0:
 		if err := l.Complete(*complete); err != nil {

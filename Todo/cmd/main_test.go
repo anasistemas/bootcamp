@@ -73,7 +73,7 @@ func TestTodoCLI(t *testing.T) {
 
 	t.Run("ListTasks", func(t *testing.T) {
 		out := output(t, "-list")
-		expected := "Title: " + task + ", Done: false, CreatedAt: "
+		expected := "- [ ] 1: " + task
 		if !strings.Contains(out, expected) {
 			t.Errorf("esperaba %q en la salida, pero se obtuvo: %s", expected, out)
 		}
@@ -83,8 +83,9 @@ func TestTodoCLI(t *testing.T) {
 		run(t, "-complete", "1")
 
 		out := output(t, "-list")
-		if strings.Contains(out, task) {
-			t.Errorf("la tarea completada no debería aparecer en la lista, pero se obtuvo: %s", out)
+		expected := "- [X] 1: " + task
+		if !strings.Contains(out, expected) {
+			t.Errorf("esperaba tarea completada %q en la salida, pero se obtuvo: %s", expected, out)
 		}
 	})
 

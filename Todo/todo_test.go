@@ -2,6 +2,7 @@ package todo
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -103,5 +104,24 @@ func TestSaveAndGet(t *testing.T) {
 	}
 	if lista2[1].Task != lista1[1].Task {
 		t.Errorf("la segunda tarea debería ser '%s' pero es '%s'", lista1[1].Task, lista2[1].Task)
+	}
+}
+
+func TestString(t *testing.T) {
+	var lista List
+	lista.Add("comprar leche")
+	lista.Add("hacer ejercicio")
+	lista.Complete(2)
+
+	salida := lista.String()
+
+	esperadaIncompleta := "- [ ] 1: comprar leche\n"
+	if !strings.Contains(salida, esperadaIncompleta) {
+		t.Errorf("esperaba tarea incompleta %q en la salida, pero se obtuvo:\n%s", esperadaIncompleta, salida)
+	}
+
+	esperadaCompleta := "- [X] 2: hacer ejercicio\n"
+	if !strings.Contains(salida, esperadaCompleta) {
+		t.Errorf("esperaba tarea completa %q en la salida, pero se obtuvo:\n%s", esperadaCompleta, salida)
 	}
 }
