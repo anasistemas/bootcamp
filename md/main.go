@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday/v2"
@@ -34,25 +34,37 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := run(*in, *out); err != nil {
+	if err := run(*in, *out, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(inFile, outFile string) error {
+func run(inFile, outFile string, writer io.Writer) error {
 	input, err := os.ReadFile(inFile)
 	if err != nil {
 		return fmt.Errorf("no se pudo leer el archivo %s: %w", inFile, err)
 	}
-
 	body := parseContent(input)
 
-	if outFile == "" {
-		outFile = filepath.Base(inFile)
+	if outFile != "" {
+		outFile = outFile + ".html"
+	} else {
+		tmpFile, err := os.CreateTemp(".", "md*.html")
+		if err != nil {
+			return fmt.Errorf("no se pudo crear el archivo temporal: %w", err)
+		}
+		tmpFile.Close()
+		outFile = tmpFile.Name()
 	}
 
-	return saveHTML(outFile+".html", body)
+	if err := saveHTML(outFile, body); err != nil {
+		return err
+	}
+
+	fmt.Fprintln(writer, outFile)
+
+	return nil
 }
 
 func parseContent(input []byte) []byte {
