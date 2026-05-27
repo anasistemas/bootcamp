@@ -37,7 +37,7 @@ func TestGet(t *testing.T) {
 			name:            "NotFound",
 			path:            "/blog",
 			expectedCode:    http.StatusNotFound,
-			expectedContent: "404",
+			expectedContent: "page not found",
 		},
 	}
 
@@ -63,7 +63,7 @@ func TestGet(t *testing.T) {
 			body := buf.String()
 
 			switch resp.Header.Get("Content-Type") {
-			case "text/plain; charset=utf-8":
+			case "text/plain", "text/plain; charset=utf-8":
 				if !strings.Contains(body, tc.expectedContent) {
 					t.Errorf("esperaba contenido %q, obtuve %q",
 						tc.expectedContent, body)
