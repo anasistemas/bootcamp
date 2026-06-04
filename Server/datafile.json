@@ -1,8 +1,1 @@
-[
-  {
-    "Task": "my first task",
-    "Done": false,
-    "CreatedAt": "2025-07-14T16:44:49.287402-05:00",
-    "CompletedAt": "0001-01-01T00:00:00Z"
-  }
-]
+[{"Task":"my first task","Done":false,"CreatedAt":"2025-07-14T16:44:49.287402-05:00","CompletedAt":"0001-01-01T00:00:00Z"},{"Task":"hacer oficio","Done":false,"CreatedAt":"2026-06-04T09:45:24.4346294-05:00","CompletedAt":"0001-01-01T00:00:00Z"}]

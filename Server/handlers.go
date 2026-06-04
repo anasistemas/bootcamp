@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/anasistemas/todo"
@@ -14,14 +15,49 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	textReply(w, r, http.StatusOK, "Hello World")
 }
 
-func getAllHandler(datafile string) http.HandlerFunc {
+func router(datafile string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var list todo.List
 		if err := list.Get(datafile); err != nil {
 			errorReply(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		resp := &todoResponse{Results: list}
-		jsonReply(w, r, http.StatusOK, resp)
+
+		switch r.Method {
+		case http.MethodGet:
+			getAllHandler(w, r, &list)
+		case http.MethodPost:
+			addHandler(w, r, &list, datafile)
+		default:
+			errorReply(w, r, http.StatusMethodNotAllowed, "method not allowed")
+		}
 	}
+}
+
+func getAllHandler(w http.ResponseWriter, r *http.Request, list *todo.List) {
+	resp := &todoResponse{Results: *list}
+	jsonReply(w, r, http.StatusOK, resp)
+}
+
+func addHandler(w http.ResponseWriter, r *http.Request, list *todo.List, datafile string) {
+	type NewTask struct {
+		Task string `json:"task"`
+	}
+
+	var item NewTask
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&item); err != nil {
+		errorReply(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	list.Add(item.Task)
+
+	if err := list.Save(datafile); err != nil {
+		errorReply(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	textReply(w, r, http.StatusCreated, "todo created successfully")
 }
