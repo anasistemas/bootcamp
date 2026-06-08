@@ -39,6 +39,8 @@ func router(datafile string) http.HandlerFunc {
 			switch r.Method {
 			case http.MethodGet:
 				getOneHandler(w, r, &list, id)
+			case http.MethodDelete:
+				deleteHandler(w, r, &list, id, datafile)
 			default:
 				errorReply(w, r, http.StatusMethodNotAllowed, "method not allowed")
 			}
@@ -102,4 +104,18 @@ func addHandler(w http.ResponseWriter, r *http.Request, list *todo.List, datafil
 	}
 
 	textReply(w, r, http.StatusCreated, "todo created successfully")
+}
+
+func deleteHandler(w http.ResponseWriter, r *http.Request, list *todo.List, id int, datafile string) {
+	if err := list.Delete(id); err != nil {
+		errorReply(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err := list.Save(datafile); err != nil {
+		errorReply(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	textReply(w, r, http.StatusNoContent, "")
 }
