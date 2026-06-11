@@ -1,11 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/anasistemas/todo"
 )
 
 type testCase struct {
@@ -13,15 +20,50 @@ type testCase struct {
 	path            string
 	expectedCode    int
 	expectedContent string
+	expItems        int
 }
 
 func setupAPI(t *testing.T) (url string, cleaner func()) {
 	t.Helper()
-	server := httptest.NewServer(newMux("datafile.json"))
+
+	tf, err := os.CreateTemp("", "datafile*.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tf.Close()
+
+	server := httptest.NewServer(newMux(tf.Name()))
+
+	for i := 1; i <= 3; i++ {
+		var body bytes.Buffer
+
+		type NewTask struct {
+			Task string `json:"task"`
+		}
+
+		encoder := json.NewEncoder(&body)
+		item := NewTask{Task: fmt.Sprintf("Task %d", i)}
+		if err := encoder.Encode(item); err != nil {
+			t.Fatal(err)
+		}
+
+		resp, err := http.Post(server.URL+"/todo", "application/json", &body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.StatusCode != http.StatusCreated {
+			t.Fatalf("esperaba status %s al crear todo, obtuve %s",
+				http.StatusText(http.StatusCreated),
+				http.StatusText(resp.StatusCode))
+		}
+	}
+
 	url = server.URL
 	cleaner = func() {
 		server.Close()
+		os.Remove(tf.Name())
 	}
+
 	return url, cleaner
 }
 
@@ -38,6 +80,19 @@ func TestGet(t *testing.T) {
 			path:            "/blog",
 			expectedCode:    http.StatusNotFound,
 			expectedContent: "page not found",
+		},
+		{
+			name:         "GetAll",
+			path:         "/todo",
+			expectedCode: http.StatusOK,
+			expItems:     3,
+		},
+		{
+			name:            "GetOne",
+			path:            "/todo/1",
+			expectedCode:    http.StatusOK,
+			expItems:        1,
+			expectedContent: "Task 1",
 		},
 	}
 
@@ -68,6 +123,31 @@ func TestGet(t *testing.T) {
 					t.Errorf("esperaba contenido %q, obtuve %q",
 						tc.expectedContent, body)
 				}
+
+			case "application/json":
+				var result struct {
+					Results      todo.List `json:"results"`
+					Date         time.Time `json:"date"`
+					TotalResults int       `json:"total_results"`
+				}
+
+				if err := json.Unmarshal([]byte(body), &result); err != nil {
+					t.Fatalf("error decodificando JSON: %v", err)
+				}
+
+				if result.TotalResults != tc.expItems {
+					t.Errorf("esperaba %d items, obtuve %d",
+						tc.expItems, result.TotalResults)
+				}
+
+				if tc.expectedContent != "" && len(result.Results) > 0 {
+					firstTask := result.Results[0].Task
+					if !strings.Contains(firstTask, tc.expectedContent) {
+						t.Errorf("esperaba tarea %q, obtuve %q",
+							tc.expectedContent, firstTask)
+					}
+				}
+
 			default:
 				t.Fatalf("Unsupported Content-Type: %q",
 					resp.Header.Get("Content-Type"))
