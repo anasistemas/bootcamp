@@ -155,3 +155,86 @@ func TestGet(t *testing.T) {
 		})
 	}
 }
+
+func TestAdd(t *testing.T) {
+	url, cleaner := setupAPI(t)
+	defer cleaner()
+
+	taskName := "Task 4"
+
+	t.Run("Add", func(t *testing.T) {
+		var body bytes.Buffer
+
+		type NewTask struct {
+			Task string `json:"task"`
+		}
+
+		item := NewTask{
+			Task: taskName,
+		}
+
+		encoder := json.NewEncoder(&body)
+
+		if err := encoder.Encode(item); err != nil {
+			t.Fatal(err)
+		}
+
+		resp, err := http.Post(
+			url+"/todo",
+			"application/json",
+			&body,
+		)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if resp.StatusCode != http.StatusCreated {
+			t.Errorf(
+				"esperaba status %s, obtuve %s",
+				http.StatusText(http.StatusCreated),
+				http.StatusText(resp.StatusCode),
+			)
+		}
+	})
+
+	t.Run("CheckAdd", func(t *testing.T) {
+		resp, err := http.Get(url + "/todo/4")
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf(
+				"esperaba status %s, obtuve %s",
+				http.StatusText(http.StatusOK),
+				http.StatusText(resp.StatusCode),
+			)
+		}
+
+		var result struct {
+			Results      todo.List `json:"results"`
+			Date         time.Time `json:"date"`
+			TotalResults int       `json:"total_results"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			t.Fatal(err)
+		}
+
+		if len(result.Results) == 0 {
+			t.Fatal("no se encontraron resultados")
+		}
+
+		if result.Results[0].Task != taskName {
+			t.Errorf(
+				"esperaba tarea %q, obtuve %q",
+				taskName,
+				result.Results[0].Task,
+			)
+		}
+	})
+}
