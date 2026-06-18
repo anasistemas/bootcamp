@@ -238,3 +238,69 @@ func TestAdd(t *testing.T) {
 		}
 	})
 }
+
+func TestDelete(t *testing.T) {
+	url, cleaner := setupAPI(t)
+	defer cleaner()
+
+	t.Run("Delete", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodDelete, url+"/todo/1", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNoContent {
+			t.Errorf(
+				"esperaba status %s, obtuve %s",
+				http.StatusText(http.StatusNoContent),
+				http.StatusText(resp.StatusCode),
+			)
+		}
+	})
+
+	t.Run("CheckDelete", func(t *testing.T) {
+		resp, err := http.Get(url + "/todo")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf(
+				"esperaba status %s, obtuve %s",
+				http.StatusText(http.StatusOK),
+				http.StatusText(resp.StatusCode),
+			)
+		}
+
+		var result struct {
+			Results      todo.List `json:"results"`
+			Date         time.Time `json:"date"`
+			TotalResults int       `json:"total_results"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			t.Fatal(err)
+		}
+
+		if result.TotalResults != 2 {
+			t.Errorf(
+				"esperaba 2 items, obtuve %d",
+				result.TotalResults,
+			)
+		}
+
+		if result.Results[0].Task != "Task 2" {
+			t.Errorf(
+				"esperaba Task 2, obtuve %q",
+				result.Results[0].Task,
+			)
+		}
+	})
+}
