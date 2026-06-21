@@ -304,3 +304,77 @@ func TestDelete(t *testing.T) {
 		}
 	})
 }
+
+func TestComplete(t *testing.T) {
+	url, cleaner := setupAPI(t)
+	defer cleaner()
+
+	t.Run("Complete", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPatch, url+"/todo/1?complete", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNoContent {
+			t.Errorf(
+				"esperaba status %s, obtuve %s",
+				http.StatusText(http.StatusNoContent),
+				http.StatusText(resp.StatusCode),
+			)
+		}
+	})
+
+	t.Run("CheckComplete", func(t *testing.T) {
+		resp, err := http.Get(url + "/todo")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf(
+				"esperaba status %s, obtuve %s",
+				http.StatusText(http.StatusOK),
+				http.StatusText(resp.StatusCode),
+			)
+		}
+
+		var result struct {
+			Results      todo.List `json:"results"`
+			Date         time.Time `json:"date"`
+			TotalResults int       `json:"total_results"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			t.Fatal(err)
+		}
+
+		if result.TotalResults != 3 {
+			t.Errorf(
+				"esperaba 3 items, obtuve %d",
+				result.TotalResults,
+			)
+		}
+
+		if !result.Results[0].Done {
+			t.Errorf(
+				"esperaba que Task 1 estuviera completada, pero Done es false",
+			)
+		}
+
+		for i, item := range result.Results[1:] {
+			if item.Done {
+				t.Errorf(
+					"esperaba que Task %d estuviera incompleta, pero Done es true",
+					i+2,
+				)
+			}
+		}
+	})
+}
