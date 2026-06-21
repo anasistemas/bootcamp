@@ -3,6 +3,7 @@ package todo
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 )
@@ -15,6 +16,18 @@ type item struct {
 }
 
 type List []item
+
+func (l *List) String() string {
+	resultado := ""
+	for i, tarea := range *l {
+		marca := " "
+		if tarea.Done {
+			marca = "X"
+		}
+		resultado += fmt.Sprintf("- [%s] %d: %s\n", marca, i+1, tarea.Task)
+	}
+	return resultado
+}
 
 func (l *List) Add(tarea string) {
 	*l = append(*l, item{
@@ -54,7 +67,7 @@ func (l *List) Get(archivo string) error {
 	data, err := os.ReadFile(archivo)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return errors.New("archivo no encontrado")
+			return nil
 		}
 		return err
 	}
